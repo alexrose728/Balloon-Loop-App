@@ -19,6 +19,7 @@ import { Button } from "@/components/Button";
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
+import { AuthModal } from "@/components/AuthModal";
 
 const EVENT_TYPES = [
   "Birthday",
@@ -106,7 +107,8 @@ export default function CreateListingScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { addListing } = useListing();
-  const { user } = useAuth();
+  const { user, isLoggedIn, login } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(!isLoggedIn);
 
   const [images, setImages] = useState<string[]>([]);
   const [title, setTitle] = useState("");
@@ -119,6 +121,18 @@ export default function CreateListingScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValid = title.length > 0 && images.length > 0 && eventType.length > 0;
+
+  if (!isLoggedIn) {
+    return (
+      <AuthModal
+        visible={showAuthModal}
+        onDismiss={() => {
+          setShowAuthModal(false);
+          navigation.goBack();
+        }}
+      />
+    );
+  }
 
   const getCurrentLocation = async () => {
     setIsLoadingLocation(true);
@@ -247,8 +261,8 @@ export default function CreateListingScreen() {
         eventType,
         colors: selectedColors.length > 0 ? selectedColors : ["Pink"],
         images,
-        creatorId: user?.id || "guest",
-        creatorName: user?.name || "Guest",
+        creatorId: user?.id || "",
+        creatorName: user?.username || "User",
         latitude: listingLocation.latitude,
         longitude: listingLocation.longitude,
         address: address || undefined,

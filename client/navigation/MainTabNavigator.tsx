@@ -17,6 +17,7 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { useAuth } from "@/hooks/useAuth";
 
 export type MainTabParamList = {
   ExploreTab: undefined;
@@ -33,8 +34,17 @@ export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { isLoggedIn } = useAuth();
 
   const tabBarHeight = 49 + insets.bottom;
+
+  const handleCreateListing = () => {
+    if (isLoggedIn) {
+      navigation.navigate("CreateListing");
+    } else {
+      navigation.navigate("CreateListing");
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -115,7 +125,7 @@ export default function MainTabNavigator() {
         />
       </Tab.Navigator>
       <FloatingActionButton
-        onPress={() => navigation.navigate("CreateListing")}
+        onPress={handleCreateListing}
         bottom={tabBarHeight + Spacing.xl}
       />
     </View>
