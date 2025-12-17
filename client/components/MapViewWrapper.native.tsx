@@ -42,10 +42,10 @@ function MapFallback({ style }: { style?: any }) {
     <View style={[styles.fallbackContainer, style, { backgroundColor: theme.backgroundSecondary }]}>
       <Feather name="map" size={48} color={theme.textSecondary} />
       <ThemedText type="body" style={styles.fallbackText}>
-        Map view available in Expo Go
+        Map requires a production build
       </ThemedText>
       <ThemedText type="caption" style={styles.fallbackSubtext}>
-        Scan QR code with your device
+        Use List View to browse listings
       </ThemedText>
     </View>
   );

@@ -38,7 +38,7 @@ export default function ExploreScreen() {
   const { theme, isDark } = useTheme();
   const { listings } = useListing();
 
-  const [isMapView, setIsMapView] = useState(true);
+  const [isMapView, setIsMapView] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -47,7 +47,7 @@ export default function ExploreScreen() {
     null,
   );
 
-  const mapRef = useRef<typeof MapView>(null);
+  const mapRef = useRef<any>(null);
   const toggleScale = useSharedValue(1);
 
   useEffect(() => {
