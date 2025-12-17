@@ -29,6 +29,7 @@ import { Button } from "@/components/Button";
 import { MapViewWrapper, MapMarkerWrapper } from "@/components/MapViewWrapper";
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "@/components/AuthModal";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -51,6 +52,7 @@ export default function ListingDetailScreen() {
 
   const scrollY = useSharedValue(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const heartScale = useSharedValue(1);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -103,6 +105,10 @@ export default function ListingDetailScreen() {
 
   const handleContactLister = () => {
     if (!listing || !listing.creatorId) return;
+    if (!isLoggedIn) {
+      setShowAuthModal(true);
+      return;
+    }
     navigation.navigate("Conversation", {
       listingId: listing.id,
       receiverId: listing.creatorId,
@@ -317,7 +323,7 @@ export default function ListingDetailScreen() {
               <Button onPress={openDirections} style={styles.directionsButton}>
                 Get Directions
               </Button>
-              {isLoggedIn && !isOwnListing && listing.creatorId ? (
+              {!isOwnListing && listing.creatorId ? (
                 <Button onPress={handleContactLister} style={styles.contactButton}>
                   Contact Lister
                 </Button>
@@ -326,6 +332,11 @@ export default function ListingDetailScreen() {
           </View>
         </View>
       </AnimatedScrollView>
+
+      <AuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </View>
   );
 }
