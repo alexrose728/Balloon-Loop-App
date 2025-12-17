@@ -5,6 +5,8 @@ import { apiRequest } from "@/lib/query-client";
 interface User {
   id: string;
   username: string;
+  email?: string;
+  provider?: "local" | "apple" | "google";
 }
 
 interface AuthContextType {
@@ -13,6 +15,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  socialLogin: (provider: "apple" | "google", userData: { email?: string; name?: string; providerId: string; identityToken?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -77,6 +80,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const socialLogin = async (
+    provider: "apple" | "google", 
+    userData: { email?: string; name?: string; providerId: string; identityToken?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/social", {
+        provider,
+        email: userData.email,
+        name: userData.name,
+        providerId: userData.providerId,
+        identityToken: userData.identityToken,
+      });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return { success: false, error: data.error || "Social login failed" };
+      }
+      
+      const newUser: User = { 
+        id: data.id, 
+        username: data.username,
+        email: data.email,
+        provider 
+      };
+      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      setUser(newUser);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Connection failed. Please try again." };
+    }
+  };
+
   const logout = async () => {
     try {
       await AsyncStorage.removeItem(USER_STORAGE_KEY);
@@ -94,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         signup,
+        socialLogin,
         logout,
       }}
     >

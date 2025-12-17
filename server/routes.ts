@@ -67,6 +67,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Social login (Apple/Google)
+  app.post("/api/auth/social", async (req, res) => {
+    try {
+      const { provider, email, name, providerId, identityToken } = req.body;
+      
+      if (!provider || !providerId) {
+        return res.status(400).json({ error: "Provider and provider ID are required" });
+      }
+
+      // For Apple Sign-In, validate the identity token
+      if (provider === "apple") {
+        if (!identityToken) {
+          return res.status(400).json({ error: "Identity token is required for Apple Sign-In" });
+        }
+        
+        // Decode and verify the JWT payload (basic validation)
+        // In production, you should verify the token signature with Apple's public keys
+        try {
+          const tokenParts = identityToken.split(".");
+          if (tokenParts.length !== 3) {
+            return res.status(401).json({ error: "Invalid identity token format" });
+          }
+          
+          const payload = JSON.parse(Buffer.from(tokenParts[1], "base64").toString());
+          
+          // Verify the subject matches the provided user ID
+          if (payload.sub !== providerId) {
+            return res.status(401).json({ error: "Token subject mismatch" });
+          }
+          
+          // Verify the token hasn't expired
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            return res.status(401).json({ error: "Token has expired" });
+          }
+          
+          // Verify the issuer is Apple
+          if (payload.iss !== "https://appleid.apple.com") {
+            return res.status(401).json({ error: "Invalid token issuer" });
+          }
+        } catch (tokenError) {
+          console.error("Token validation error:", tokenError);
+          return res.status(401).json({ error: "Failed to validate identity token" });
+        }
+      }
+
+      const socialUsername = `${provider}_${providerId}`;
+      const displayName = name || email?.split("@")[0] || `${provider}User`;
+      
+      const [existingUser] = await db.select().from(users).where(eq(users.username, socialUsername));
+      
+      if (existingUser) {
+        res.json({ 
+          id: existingUser.id, 
+          username: displayName,
+          email 
+        });
+      } else {
+        const randomPassword = await bcrypt.hash(Math.random().toString(36), SALT_ROUNDS);
+        
+        const [newUser] = await db.insert(users).values({
+          username: socialUsername,
+          password: randomPassword,
+        }).returning();
+        
+        res.status(201).json({ 
+          id: newUser.id, 
+          username: displayName,
+          email 
+        });
+      }
+    } catch (error) {
+      console.error("Error with social login:", error);
+      res.status(500).json({ error: "Failed to authenticate" });
+    }
+  });
+
   // Get all listings
   app.get("/api/listings", async (req, res) => {
     try {

@@ -51,7 +51,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Balloon Loop to use your location."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "reactCompiler": true
