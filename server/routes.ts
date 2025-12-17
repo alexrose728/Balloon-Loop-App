@@ -3,8 +3,70 @@ import { createServer, type Server } from "node:http";
 import { db } from "./db";
 import { listings, favorites, users } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+
+const SALT_ROUNDS = 10;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Signup
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+      
+      const existing = await db.select().from(users).where(eq(users.username, username));
+      if (existing.length > 0) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      
+      const [newUser] = await db.insert(users).values({
+        username,
+        password: hashedPassword,
+      }).returning();
+      
+      res.status(201).json({ id: newUser.id, username: newUser.username });
+    } catch (error) {
+      console.error("Error signing up:", error);
+      res.status(500).json({ error: "Failed to sign up" });
+    }
+  });
+
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      res.json({ id: user.id, username: user.username });
+    } catch (error) {
+      console.error("Error logging in:", error);
+      res.status(500).json({ error: "Failed to log in" });
+    }
+  });
+
   // Get all listings
   app.get("/api/listings", async (req, res) => {
     try {

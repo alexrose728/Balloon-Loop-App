@@ -28,6 +28,8 @@ import {
   MapView,
 } from "@/components/MapViewWrapper";
 import { useListing } from "@/hooks/useListings";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "@/components/AuthModal";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -37,8 +39,10 @@ export default function ExploreScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme, isDark } = useTheme();
   const { listings } = useListing();
+  const { user, isLoggedIn } = useAuth();
 
   const [isMapView, setIsMapView] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -231,6 +235,27 @@ export default function ExploreScreen() {
             flexGrow: 1,
           }}
           scrollIndicatorInsets={{ bottom: insets.bottom }}
+          ListHeaderComponent={
+            !isLoggedIn ? (
+              <Pressable
+                onPress={() => setShowAuthModal(true)}
+                style={[styles.authBanner, { backgroundColor: theme.primary }]}
+              >
+                <View style={styles.authBannerContent}>
+                  <Feather name="user" size={20} color="#FFFFFF" />
+                  <View style={styles.authBannerText}>
+                    <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                      Sign in to save favorites
+                    </ThemedText>
+                    <ThemedText type="small" style={{ color: "rgba(255,255,255,0.8)" }}>
+                      Create an account to save and share listings
+                    </ThemedText>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={20} color="#FFFFFF" />
+              </Pressable>
+            ) : null
+          }
           ListEmptyComponent={renderEmptyState}
           renderItem={({ item }) => (
             <ListingCard listing={item} style={styles.listCard} />
@@ -260,6 +285,8 @@ export default function ExploreScreen() {
           {isMapView ? "List" : "Map"}
         </ThemedText>
       </AnimatedPressable>
+
+      <AuthModal visible={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </View>
   );
 }
@@ -358,5 +385,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  authBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.lg,
+  },
+  authBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: Spacing.md,
+  },
+  authBannerText: {
+    flex: 1,
   },
 });

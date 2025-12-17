@@ -1,29 +1,88 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import type { User } from "@/types/listing";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiRequest } from "@/lib/query-client";
+
+interface User {
+  id: string;
+  username: string;
+}
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  login: () => void;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
-const MOCK_USER: User = {
-  id: "user1",
-  name: "Sarah M.",
-  email: "sarah@example.com",
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(MOCK_USER);
+const USER_STORAGE_KEY = "@balloonloop_user";
 
-  const login = () => {
-    setUser(MOCK_USER);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadStoredUser();
+  }, []);
+
+  const loadStoredUser = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Error loading user:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", { username, password });
+      const userData = await response.json();
+      
+      if (!response.ok) {
+        return { success: false, error: userData.error || "Login failed" };
+      }
+      
+      const newUser = { id: userData.id, username: userData.username };
+      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      setUser(newUser);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Connection failed. Please try again." };
+    }
+  };
+
+  const signup = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/signup", { username, password });
+      const userData = await response.json();
+      
+      if (!response.ok) {
+        return { success: false, error: userData.error || "Signup failed" };
+      }
+      
+      const newUser = { id: userData.id, username: userData.username };
+      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      setUser(newUser);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Connection failed. Please try again." };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem(USER_STORAGE_KEY);
+    } catch (error) {
+      console.error("Error removing user:", error);
+    }
     setUser(null);
   };
 
@@ -32,7 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoggedIn: user !== null,
+        isLoading,
         login,
+        signup,
         logout,
       }}
     >
