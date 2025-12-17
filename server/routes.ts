@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { db } from "./db";
-import { listings, favorites, users } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { listings, favorites, users, messages } from "@shared/schema";
+import { eq, and, desc, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const SALT_ROUNDS = 10;
@@ -255,6 +255,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing favorite:", error);
       res.status(500).json({ error: "Failed to remove favorite" });
+    }
+  });
+
+  // Get conversations for a user (grouped by listing and other user)
+  app.get("/api/messages/conversations/:userId", async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      
+      // Get all messages where user is sender or receiver
+      const allMessages = await db
+        .select()
+        .from(messages)
+        .where(or(eq(messages.senderId, userId), eq(messages.receiverId, userId)))
+        .orderBy(desc(messages.createdAt));
+      
+      // Group by conversation (unique combination of other user + listing)
+      const conversationsMap = new Map<string, {
+        listingId: string;
+        otherUserId: string;
+        lastMessage: typeof allMessages[0];
+        unreadCount: number;
+      }>();
+      
+      for (const msg of allMessages) {
+        const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+        const key = `${msg.listingId}-${otherUserId}`;
+        
+        if (!conversationsMap.has(key)) {
+          conversationsMap.set(key, {
+            listingId: msg.listingId,
+            otherUserId,
+            lastMessage: msg,
+            unreadCount: msg.receiverId === userId && msg.read === "false" ? 1 : 0,
+          });
+        } else {
+          const conv = conversationsMap.get(key)!;
+          if (msg.receiverId === userId && msg.read === "false") {
+            conv.unreadCount++;
+          }
+        }
+      }
+      
+      // Enrich with listing and user info
+      const conversations = [];
+      for (const conv of conversationsMap.values()) {
+        const [listing] = await db.select().from(listings).where(eq(listings.id, conv.listingId));
+        const [otherUser] = await db.select().from(users).where(eq(users.id, conv.otherUserId));
+        
+        conversations.push({
+          listingId: conv.listingId,
+          listingTitle: listing?.title || "Unknown Listing",
+          listingImage: listing?.images?.[0] || null,
+          otherUserId: conv.otherUserId,
+          otherUserName: otherUser?.username || "Unknown User",
+          lastMessage: conv.lastMessage.content,
+          lastMessageTime: conv.lastMessage.createdAt,
+          unreadCount: conv.unreadCount,
+        });
+      }
+      
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  // Get messages for a specific conversation
+  app.get("/api/messages/:userId/:listingId/:otherUserId", async (req, res) => {
+    try {
+      const { userId, listingId, otherUserId } = req.params;
+      
+      const conversationMessages = await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.listingId, listingId),
+            or(
+              and(eq(messages.senderId, userId), eq(messages.receiverId, otherUserId)),
+              and(eq(messages.senderId, otherUserId), eq(messages.receiverId, userId))
+            )
+          )
+        )
+        .orderBy(messages.createdAt);
+      
+      // Mark messages as read
+      await db
+        .update(messages)
+        .set({ read: "true" })
+        .where(
+          and(
+            eq(messages.listingId, listingId),
+            eq(messages.senderId, otherUserId),
+            eq(messages.receiverId, userId)
+          )
+        );
+      
+      res.json(conversationMessages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Send a message
+  app.post("/api/messages", async (req, res) => {
+    try {
+      const { senderId, receiverId, listingId, content } = req.body;
+      
+      if (!senderId || !receiverId || !listingId || !content) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      
+      const [newMessage] = await db.insert(messages).values({
+        senderId,
+        receiverId,
+        listingId,
+        content,
+      }).returning();
+      
+      res.status(201).json(newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ error: "Failed to send message" });
     }
   });
 
