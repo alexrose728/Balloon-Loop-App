@@ -185,11 +185,6 @@ export default function ProfileScreen() {
           onPress={() => navigation.navigate("MyListings")}
         />
         <MenuButton
-          icon="heart"
-          label="Favorites"
-          onPress={() => (navigation as any).navigate("Main", { screen: "Favorites" })}
-        />
-        <MenuButton
           icon="settings"
           label="Settings"
           onPress={() => {}}
