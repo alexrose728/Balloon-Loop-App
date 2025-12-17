@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ExploreStackNavigator from "@/navigation/ExploreStackNavigator";
 import SearchScreen from "@/screens/SearchScreen";
 import FavoritesScreen from "@/screens/FavoritesScreen";
+import MessagesScreen from "@/screens/MessagesScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useTheme } from "@/hooks/useTheme";
@@ -20,6 +21,7 @@ import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 export type MainTabParamList = {
   ExploreTab: undefined;
   SearchTab: undefined;
+  MessagesTab: undefined;
   FavoritesTab: undefined;
   ProfileTab: undefined;
 };
@@ -78,6 +80,16 @@ export default function MainTabNavigator() {
             title: "Search",
             tabBarIcon: ({ color, size }) => (
               <Feather name="search" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="MessagesTab"
+          component={MessagesScreen}
+          options={{
+            title: "Messages",
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="message-circle" size={size} color={color} />
             ),
           }}
         />

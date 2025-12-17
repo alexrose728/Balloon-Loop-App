@@ -5,6 +5,7 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import CreateListingScreen from "@/screens/CreateListingScreen";
 import ListingDetailScreen from "@/screens/ListingDetailScreen";
 import MyListingsScreen from "@/screens/MyListingsScreen";
+import ConversationScreen from "@/screens/ConversationScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
@@ -12,6 +13,12 @@ export type RootStackParamList = {
   CreateListing: undefined;
   ListingDetail: { listingId: string };
   MyListings: undefined;
+  Conversation: {
+    listingId: string;
+    receiverId: string;
+    listingTitle: string;
+    receiverName: string;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,6 +51,13 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="MyListings"
         component={MyListingsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="Conversation"
+        component={ConversationScreen}
         options={{
           headerShown: false,
         }}

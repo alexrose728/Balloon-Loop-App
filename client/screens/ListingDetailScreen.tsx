@@ -28,7 +28,9 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { Button } from "@/components/Button";
 import { MapViewWrapper, MapMarkerWrapper } from "@/components/MapViewWrapper";
 import { useListing } from "@/hooks/useListings";
+import { useAuth } from "@/hooks/useAuth";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMAGE_HEIGHT = 300;
@@ -38,10 +40,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function ListingDetailScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "ListingDetail">>();
   const { theme, isDark } = useTheme();
   const { listings, favorites, toggleFavorite } = useListing();
+  const { user, isLoggedIn } = useAuth();
 
   const listing = listings.find((l) => l.id === route.params.listingId);
   const isFavorite = listing ? favorites.includes(listing.id) : false;
@@ -97,6 +100,18 @@ export default function ListingDetailScreen() {
     });
     Linking.openURL(url);
   };
+
+  const handleContactLister = () => {
+    if (!listing || !listing.creatorId) return;
+    navigation.navigate("Conversation", {
+      listingId: listing.id,
+      receiverId: listing.creatorId,
+      listingTitle: listing.title,
+      receiverName: listing.creatorName,
+    });
+  };
+
+  const isOwnListing = user?.id === listing?.creatorId;
 
   if (!listing) {
     return (
@@ -298,9 +313,16 @@ export default function ListingDetailScreen() {
                 </MapMarkerWrapper>
               </MapViewWrapper>
             </View>
-            <Button onPress={openDirections} style={styles.directionsButton}>
-              Get Directions
-            </Button>
+            <View style={styles.actionButtons}>
+              <Button onPress={openDirections} style={styles.directionsButton}>
+                Get Directions
+              </Button>
+              {isLoggedIn && !isOwnListing && listing.creatorId ? (
+                <Button onPress={handleContactLister} style={styles.contactButton}>
+                  Contact Lister
+                </Button>
+              ) : null}
+            </View>
           </View>
         </View>
       </AnimatedScrollView>
@@ -428,7 +450,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  directionsButton: {
+  actionButtons: {
+    gap: Spacing.sm,
     marginTop: Spacing.sm,
+  },
+  directionsButton: {
+  },
+  contactButton: {
   },
 });
