@@ -15,7 +15,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useListing } from "@/hooks/useListings";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import type { Listing } from "@/types/listing";
-import type { ExploreStackParamList } from "@/navigation/ExploreStackNavigator";
+import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 interface ListingCardProps {
   listing: Listing;
@@ -31,7 +31,7 @@ export function ListingCard({
   style,
 }: ListingCardProps) {
   const navigation =
-    useNavigation<NativeStackNavigationProp<ExploreStackParamList>>();
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useTheme();
   const { favorites, toggleFavorite } = useListing();
   const isFavorite = favorites.includes(listing.id);

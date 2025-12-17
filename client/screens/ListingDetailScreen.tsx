@@ -28,7 +28,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { Button } from "@/components/Button";
 import { MapViewWrapper, MapMarkerWrapper } from "@/components/MapViewWrapper";
 import { useListing } from "@/hooks/useListings";
-import type { ExploreStackParamList } from "@/navigation/ExploreStackNavigator";
+import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMAGE_HEIGHT = 300;
@@ -39,7 +39,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export default function ListingDetailScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<ExploreStackParamList, "ListingDetail">>();
+  const route = useRoute<RouteProp<RootStackParamList, "ListingDetail">>();
   const { theme, isDark } = useTheme();
   const { listings, favorites, toggleFavorite } = useListing();
 
