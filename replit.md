@@ -13,8 +13,8 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 - **Framework**: React Native with Expo SDK 54
 - **Navigation**: React Navigation with native stack and bottom tabs
-  - Tab-based main navigation (Explore, Search, Favorites, Profile)
-  - Stack navigation for detail screens and modals
+  - Tab-based main navigation (Explore, Search, Messages, Favorites, Profile)
+  - Stack navigation for detail screens, modals, and conversations
   - Floating Action Button for creating listings
 - **State Management**: 
   - React Query for server state and data fetching
@@ -29,10 +29,11 @@ Preferred communication style: Simple, everyday language.
 - **Data Validation**: Zod schemas generated from Drizzle schemas
 
 ### Data Model
-The database has three main tables:
-- **users**: Basic user accounts with username/password
+The database has four main tables:
+- **users**: Basic user accounts with username/password (supports social login via Apple)
 - **listings**: Balloon arch entries with title, description, event type, colors, images, location coordinates, and creator info
 - **favorites**: Junction table linking users to their favorited listings
+- **messages**: User-to-user messaging linked to specific listings
 
 ### Path Aliases
 - `@/` maps to `./client/` for frontend code
@@ -58,9 +59,11 @@ The database has three main tables:
 ### Maps
 - **react-native-maps**: Native map component for iOS/Android (falls back gracefully on web/unsupported platforms)
 
-### Authentication (Planned)
-- Design guidelines indicate SSO with Apple Sign-In and Google Sign-In should be implemented
-- Currently uses mock authentication context
+### Authentication
+- Traditional username/password signup with bcrypt password hashing
+- Apple Sign-In fully functional on iOS devices with server-side identity token validation
+- Google Sign-In UI present (requires OAuth credentials configuration)
+- Sessions persisted in AsyncStorage
 
 ### Third-party UI
 - **@expo/vector-icons**: Feather icon set throughout the app

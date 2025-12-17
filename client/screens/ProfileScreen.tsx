@@ -138,11 +138,11 @@ export default function ProfileScreen() {
           ]}
         >
           <ThemedText type="h1" style={{ color: theme.primary }}>
-            {user?.name.charAt(0).toUpperCase()}
+            {user?.username?.charAt(0).toUpperCase() || "?"}
           </ThemedText>
         </View>
         <View style={styles.profileInfo}>
-          <ThemedText type="h3">{user?.name}</ThemedText>
+          <ThemedText type="h3">{user?.username || "User"}</ThemedText>
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
             Member since Dec 2024
           </ThemedText>
