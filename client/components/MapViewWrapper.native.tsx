@@ -41,11 +41,14 @@ function MapFallback({ style }: { style?: any }) {
   return (
     <View style={[styles.fallbackContainer, style, { backgroundColor: theme.backgroundSecondary }]}>
       <Feather name="map" size={48} color={theme.textSecondary} />
-      <ThemedText type="body" style={styles.fallbackText}>
-        Map requires a production build
+      <ThemedText type="body" style={[styles.fallbackText, { color: theme.text }]}>
+        Map View
       </ThemedText>
-      <ThemedText type="caption" style={styles.fallbackSubtext}>
-        Use List View to browse listings
+      <ThemedText type="caption" style={[styles.fallbackSubtext, { color: theme.textSecondary }]}>
+        Available in production or native builds
+      </ThemedText>
+      <ThemedText type="caption" style={[styles.fallbackSubtext, { color: theme.textSecondary, marginTop: Spacing.sm }]}>
+        Use List View to browse all listings
       </ThemedText>
     </View>
   );

@@ -41,14 +41,20 @@ export function MapViewWrapper({ style }: MapViewWrapperProps) {
       >
         <Feather name="map" size={32} color={theme.primary} />
       </View>
-      <ThemedText type="body" style={styles.webText}>
+      <ThemedText type="body" style={[styles.webText, { color: theme.text }]}>
         Map View
       </ThemedText>
       <ThemedText
         type="small"
         style={[styles.webSubtext, { color: theme.textSecondary }]}
       >
-        Open in Expo Go to see the interactive map
+        Maps are available on mobile devices
+      </ThemedText>
+      <ThemedText
+        type="caption"
+        style={[styles.webSubtext, { color: theme.textSecondary, marginTop: Spacing.sm }]}
+      >
+        Scan the QR code to test on your phone via Expo Go
       </ThemedText>
     </View>
   );
