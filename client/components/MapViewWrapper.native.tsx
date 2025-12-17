@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Feather } from "@expo/vector-icons";
@@ -23,6 +22,35 @@ interface MapViewWrapperProps {
   children?: React.ReactNode;
 }
 
+let MapViewComponent: React.ComponentType<any> | null = null;
+let MarkerComponent: React.ComponentType<any> | null = null;
+let mapsAvailable = false;
+
+try {
+  const maps = require("react-native-maps");
+  MapViewComponent = maps.default;
+  MarkerComponent = maps.Marker;
+  mapsAvailable = true;
+} catch (e) {
+  mapsAvailable = false;
+}
+
+function MapFallback({ style }: { style?: any }) {
+  const { theme } = useTheme();
+  
+  return (
+    <View style={[styles.fallbackContainer, style, { backgroundColor: theme.backgroundSecondary }]}>
+      <Feather name="map" size={48} color={theme.textSecondary} />
+      <ThemedText type="body" style={styles.fallbackText}>
+        Map view available in Expo Go
+      </ThemedText>
+      <ThemedText type="caption" style={styles.fallbackSubtext}>
+        Scan QR code with your device
+      </ThemedText>
+    </View>
+  );
+}
+
 export function MapViewWrapper({
   style,
   initialRegion,
@@ -34,19 +62,28 @@ export function MapViewWrapper({
   mapRef,
   children,
 }: MapViewWrapperProps) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!mapsAvailable || hasError || !MapViewComponent) {
+    return <MapFallback style={style} />;
+  }
+
   return (
-    <MapView
-      ref={mapRef}
-      style={style}
-      initialRegion={initialRegion}
-      showsUserLocation={showsUserLocation}
-      showsMyLocationButton={showsMyLocationButton}
-      scrollEnabled={scrollEnabled}
-      zoomEnabled={zoomEnabled}
-      userInterfaceStyle={userInterfaceStyle}
-    >
-      {children}
-    </MapView>
+    <ErrorBoundaryMap fallback={<MapFallback style={style} />}>
+      <MapViewComponent
+        ref={mapRef}
+        style={style}
+        initialRegion={initialRegion}
+        showsUserLocation={showsUserLocation}
+        showsMyLocationButton={showsMyLocationButton}
+        scrollEnabled={scrollEnabled}
+        zoomEnabled={zoomEnabled}
+        userInterfaceStyle={userInterfaceStyle}
+        onError={() => setHasError(true)}
+      >
+        {children}
+      </MapViewComponent>
+    </ErrorBoundaryMap>
   );
 }
 
@@ -59,11 +96,58 @@ export function MapMarkerWrapper({
   title?: string;
   children?: React.ReactNode;
 }) {
+  if (!mapsAvailable || !MarkerComponent) {
+    return null;
+  }
+  
   return (
-    <Marker coordinate={coordinate} title={title}>
+    <MarkerComponent coordinate={coordinate} title={title}>
       {children}
-    </Marker>
+    </MarkerComponent>
   );
 }
 
-export { MapView, Marker };
+class ErrorBoundaryMap extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.log("Map error caught:", error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+export const MapView = MapViewComponent;
+export const Marker = MarkerComponent;
+
+const styles = StyleSheet.create({
+  fallbackContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: BorderRadius.lg,
+  },
+  fallbackText: {
+    marginTop: Spacing.md,
+    textAlign: "center",
+  },
+  fallbackSubtext: {
+    marginTop: Spacing.xs,
+    textAlign: "center",
+  },
+});
