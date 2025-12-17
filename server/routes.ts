@@ -287,11 +287,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             listingId: msg.listingId,
             otherUserId,
             lastMessage: msg,
-            unreadCount: msg.receiverId === userId && msg.read === "false" ? 1 : 0,
+            unreadCount: msg.receiverId === userId && !msg.read ? 1 : 0,
           });
         } else {
           const conv = conversationsMap.get(key)!;
-          if (msg.receiverId === userId && msg.read === "false") {
+          if (msg.receiverId === userId && !msg.read) {
             conv.unreadCount++;
           }
         }
@@ -344,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark messages as read
       await db
         .update(messages)
-        .set({ read: "true" })
+        .set({ read: true })
         .where(
           and(
             eq(messages.listingId, listingId),

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, doublePrecision, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, doublePrecision, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -45,7 +45,7 @@ export const messages = pgTable("messages", {
   receiverId: varchar("receiver_id").references(() => users.id).notNull(),
   listingId: varchar("listing_id").references(() => listings.id).notNull(),
   content: text("content").notNull(),
-  read: text("read").default("false").notNull(),
+  read: boolean("read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
