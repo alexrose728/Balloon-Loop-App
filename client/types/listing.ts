@@ -7,6 +7,7 @@ export interface Listing {
   images: string[];
   latitude: number;
   longitude: number;
+  address?: string;
   creatorId: string;
   creatorName: string;
   createdAt: Date;

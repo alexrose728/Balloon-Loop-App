@@ -4,12 +4,14 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import CreateListingScreen from "@/screens/CreateListingScreen";
 import ListingDetailScreen from "@/screens/ListingDetailScreen";
+import MyListingsScreen from "@/screens/MyListingsScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
   Main: undefined;
   CreateListing: undefined;
   ListingDetail: { listingId: string };
+  MyListings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +37,13 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="ListingDetail"
         component={ListingDetailScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="MyListings"
+        component={MyListingsScreen}
         options={{
           headerShown: false,
         }}

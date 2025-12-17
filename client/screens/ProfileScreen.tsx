@@ -1,7 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Pressable, ScrollView, Image } from "react-native";
+import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
@@ -15,6 +16,8 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/Button";
+import type { RootStackParamList } from "@/navigation/RootStackNavigator";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -67,9 +70,12 @@ function MenuButton({
   );
 }
 
+type ProfileNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const navigation = useNavigation<ProfileNavigationProp>();
   const { theme } = useTheme();
   const { listings, favorites } = useListing();
   const { user, isLoggedIn, login, logout } = useAuth();
@@ -176,12 +182,12 @@ export default function ProfileScreen() {
         <MenuButton
           icon="grid"
           label="My Listings"
-          onPress={() => {}}
+          onPress={() => navigation.navigate("MyListings")}
         />
         <MenuButton
           icon="heart"
           label="Favorites"
-          onPress={() => {}}
+          onPress={() => (navigation as any).navigate("Main", { screen: "Favorites" })}
         />
         <MenuButton
           icon="settings"

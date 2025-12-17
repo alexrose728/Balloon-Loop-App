@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { View, StyleSheet, TextInput, Pressable, Alert, ScrollView } from "react-native";
+import { View, StyleSheet, TextInput, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { Image } from "expo-image";
 import Animated, {
   useAnimatedStyle,
@@ -17,6 +18,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { Button } from "@/components/Button";
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 
 const EVENT_TYPES = [
   "Birthday",
@@ -111,10 +113,97 @@ export default function CreateListingScreen() {
   const [description, setDescription] = useState("");
   const [eventType, setEventType] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [address, setAddress] = useState("");
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValid = title.length > 0 && images.length > 0 && eventType.length > 0;
 
+  const getCurrentLocation = async () => {
+    setIsLoadingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const buttons: { text: string; style?: "cancel" | "default" | "destructive"; onPress?: () => void }[] = [
+          { text: "Cancel", style: "cancel" as const },
+        ];
+        if (Platform.OS !== "web") {
+          buttons.push({
+            text: "Open Settings",
+            onPress: async () => {
+              try {
+                const Linking = await import("expo-linking");
+                await Linking.openSettings();
+              } catch (e) {}
+            },
+          });
+        } else {
+          buttons.push({ text: "OK" });
+        }
+        Alert.alert(
+          "Location Permission",
+          "Enable location access to automatically add your location to the listing.",
+          buttons
+        );
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      setLocation({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+
+      const [geocode] = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+
+      if (geocode) {
+        const addressParts = [
+          geocode.street,
+          geocode.city,
+          geocode.region,
+        ].filter(Boolean);
+        setAddress(addressParts.join(", "));
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not get your current location. Please try again.");
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== "granted") {
+      const buttons: { text: string; style?: "cancel" | "default" | "destructive"; onPress?: () => void }[] = [
+        { text: "Cancel", style: "cancel" as const },
+      ];
+      if (Platform.OS !== "web") {
+        buttons.push({
+          text: "Open Settings",
+          onPress: async () => {
+            try {
+              const Linking = await import("expo-linking");
+              await Linking.openSettings();
+            } catch (e) {}
+          },
+        });
+      }
+      Alert.alert(
+        "Photos Access Required",
+        "Please allow access to your photos to add images to your listing.",
+        buttons
+      );
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
@@ -142,24 +231,37 @@ export default function CreateListingScreen() {
     );
   };
 
-  const handleSubmit = () => {
-    if (!isValid) return;
+  const handleSubmit = async () => {
+    if (!isValid || isSubmitting) return;
 
-    addListing({
-      title,
-      description,
-      eventType,
-      colors: selectedColors,
-      images,
-      creatorId: user?.id || "guest",
-      creatorName: user?.name || "Guest",
-      latitude: 37.7749 + (Math.random() - 0.5) * 0.1,
-      longitude: -122.4194 + (Math.random() - 0.5) * 0.1,
-    });
+    setIsSubmitting(true);
+    try {
+      const listingLocation = location || {
+        latitude: 37.7749 + (Math.random() - 0.5) * 0.1,
+        longitude: -122.4194 + (Math.random() - 0.5) * 0.1,
+      };
 
-    Alert.alert("Success", "Your balloon arch has been posted!", [
-      { text: "OK", onPress: () => navigation.goBack() },
-    ]);
+      await addListing({
+        title,
+        description,
+        eventType,
+        colors: selectedColors.length > 0 ? selectedColors : ["Pink"],
+        images,
+        creatorId: user?.id || "guest",
+        creatorName: user?.name || "Guest",
+        latitude: listingLocation.latitude,
+        longitude: listingLocation.longitude,
+        address: address || undefined,
+      });
+
+      Alert.alert("Success", "Your balloon arch has been posted!", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+    } catch (error) {
+      Alert.alert("Error", "Failed to create listing. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -190,22 +292,26 @@ export default function CreateListingScreen() {
         <ThemedText type="h4">New Listing</ThemedText>
         <Pressable
           onPress={handleSubmit}
-          disabled={!isValid}
+          disabled={!isValid || isSubmitting}
           style={styles.headerButton}
         >
-          <ThemedText
-            type="body"
-            style={{
-              color: isValid ? theme.primary : theme.textDisabled,
-              fontWeight: "600",
-            }}
-          >
-            Post
-          </ThemedText>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <ThemedText
+              type="body"
+              style={{
+                color: isValid ? theme.primary : theme.textDisabled,
+                fontWeight: "600",
+              }}
+            >
+              Post
+            </ThemedText>
+          )}
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xl },
@@ -214,13 +320,9 @@ export default function CreateListingScreen() {
       >
         <View style={styles.section}>
           <ThemedText type="small" style={styles.sectionLabel}>
-            Photos (up to 5)
+            Photos (up to 5) *
           </ThemedText>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.imagesRow}
-          >
+          <View style={styles.imagesRow}>
             {images.map((uri, index) => (
               <View key={index} style={styles.imageContainer}>
                 <Image source={{ uri }} style={styles.image} />
@@ -267,12 +369,12 @@ export default function CreateListingScreen() {
                 </ThemedText>
               </Pressable>
             ) : null}
-          </ScrollView>
+          </View>
         </View>
 
         <View style={styles.section}>
           <ThemedText type="small" style={styles.sectionLabel}>
-            Title
+            Title *
           </ThemedText>
           <TextInput
             style={[
@@ -315,8 +417,59 @@ export default function CreateListingScreen() {
         </View>
 
         <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="small" style={styles.sectionLabel}>
+              Location
+            </ThemedText>
+            <Pressable
+              onPress={getCurrentLocation}
+              disabled={isLoadingLocation}
+              style={styles.locationButton}
+            >
+              {isLoadingLocation ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <>
+                  <Feather name="map-pin" size={16} color={theme.primary} />
+                  <ThemedText
+                    type="small"
+                    style={{ color: theme.primary, marginLeft: Spacing.xs }}
+                  >
+                    Use Current
+                  </ThemedText>
+                </>
+              )}
+            </Pressable>
+          </View>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.backgroundDefault,
+                color: theme.text,
+              },
+            ]}
+            placeholder="Enter address or use current location"
+            placeholderTextColor={theme.textSecondary}
+            value={address}
+            onChangeText={setAddress}
+          />
+          {location ? (
+            <View style={styles.locationConfirmed}>
+              <Feather name="check-circle" size={16} color={theme.success} />
+              <ThemedText
+                type="caption"
+                style={{ color: theme.success, marginLeft: Spacing.xs }}
+              >
+                Location captured
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
           <ThemedText type="small" style={styles.sectionLabel}>
-            Event Type
+            Event Type *
           </ThemedText>
           <View style={styles.chipsRow}>
             {EVENT_TYPES.map((type) => (
@@ -346,7 +499,7 @@ export default function CreateListingScreen() {
             ))}
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </View>
   );
 }
@@ -372,12 +525,18 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: Spacing.xl,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   sectionLabel: {
     fontWeight: "600",
     marginBottom: Spacing.sm,
   },
   imagesRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.md,
   },
   imageContainer: {
@@ -439,5 +598,15 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     marginRight: Spacing.xs,
+  },
+  locationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.xs,
+  },
+  locationConfirmed: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.sm,
   },
 });
