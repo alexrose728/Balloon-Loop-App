@@ -4,7 +4,6 @@ import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
-import MapView, { Marker } from "react-native-maps";
 
 interface MapViewWrapperProps {
   style?: any;
@@ -23,6 +22,20 @@ interface MapViewWrapperProps {
   children?: React.ReactNode;
 }
 
+let MapViewComponent: React.ComponentType<any> | null = null;
+let MarkerComponent: React.ComponentType<any> | null = null;
+let mapsAvailable = false;
+
+try {
+  const maps = require("react-native-maps");
+  MapViewComponent = maps.default;
+  MarkerComponent = maps.Marker;
+  mapsAvailable = true;
+} catch (e) {
+  console.log("Maps not available:", e);
+  mapsAvailable = false;
+}
+
 function MapFallback({ style }: { style?: any }) {
   const { theme } = useTheme();
   
@@ -33,7 +46,7 @@ function MapFallback({ style }: { style?: any }) {
         Map View
       </ThemedText>
       <ThemedText type="caption" style={[styles.fallbackSubtext, { color: theme.textSecondary }]}>
-        Scan the QR code with Expo Go to view the interactive map
+        Maps require a native app build
       </ThemedText>
       <ThemedText type="caption" style={[styles.fallbackSubtext, { color: theme.textSecondary, marginTop: Spacing.sm }]}>
         Use List View to browse all listings
@@ -53,9 +66,13 @@ export function MapViewWrapper({
   mapRef,
   children,
 }: MapViewWrapperProps) {
+  if (!mapsAvailable || !MapViewComponent) {
+    return <MapFallback style={style} />;
+  }
+
   return (
     <ErrorBoundaryMap fallback={<MapFallback style={style} />}>
-      <MapView
+      <MapViewComponent
         ref={mapRef}
         style={style}
         initialRegion={initialRegion}
@@ -66,7 +83,7 @@ export function MapViewWrapper({
         userInterfaceStyle={userInterfaceStyle}
       >
         {children}
-      </MapView>
+      </MapViewComponent>
     </ErrorBoundaryMap>
   );
 }
@@ -80,10 +97,14 @@ export function MapMarkerWrapper({
   title?: string;
   children?: React.ReactNode;
 }) {
+  if (!mapsAvailable || !MarkerComponent) {
+    return null;
+  }
+  
   return (
-    <Marker coordinate={coordinate} title={title}>
+    <MarkerComponent coordinate={coordinate} title={title}>
       {children}
-    </Marker>
+    </MarkerComponent>
   );
 }
 
@@ -112,7 +133,8 @@ class ErrorBoundaryMap extends React.Component<
   }
 }
 
-export { MapView, Marker };
+export const MapView = MapViewComponent;
+export const Marker = MarkerComponent;
 
 const styles = StyleSheet.create({
   fallbackContainer: {
