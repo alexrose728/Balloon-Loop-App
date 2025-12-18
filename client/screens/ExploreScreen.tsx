@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -8,15 +8,11 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useHeaderHeight } from "@react-navigation/elements";
+import { useHeaderHeight, HeaderButton } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -30,8 +26,6 @@ import {
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "@/components/AuthModal";
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
@@ -52,7 +46,26 @@ export default function ExploreScreen() {
   );
 
   const mapRef = useRef<any>(null);
-  const toggleScale = useSharedValue(1);
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <HeaderButton onPress={toggleView}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Feather
+              name={isMapView ? "list" : "map"}
+              size={20}
+              color={theme.text}
+            />
+            <ThemedText type="small" style={{ fontWeight: "600" }}>
+              {isMapView ? "List" : "Map"}
+            </ThemedText>
+          </View>
+        </HeaderButton>
+      ),
+    });
+  }, [navigation, isMapView, theme.text]);
 
   useEffect(() => {
     requestLocationPermission();
@@ -84,11 +97,7 @@ export default function ExploreScreen() {
   };
 
   const toggleView = () => {
-    toggleScale.value = withSpring(0.95, { damping: 15 });
-    setTimeout(() => {
-      toggleScale.value = withSpring(1, { damping: 15 });
-      setIsMapView(!isMapView);
-    }, 100);
+    setIsMapView(!isMapView);
   };
 
   const centerOnUser = async () => {
@@ -103,10 +112,6 @@ export default function ExploreScreen() {
       );
     }
   };
-
-  const toggleAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: toggleScale.value }],
-  }));
 
   const initialRegion = userLocation
     ? {
@@ -264,28 +269,6 @@ export default function ExploreScreen() {
         />
       )}
 
-      <AnimatedPressable
-        onPress={toggleView}
-        style={[
-          styles.toggleButton,
-          {
-            backgroundColor: theme.backgroundRoot,
-            top: headerHeight + Spacing.lg,
-            borderColor: theme.border,
-          },
-          toggleAnimatedStyle,
-        ]}
-      >
-        <Feather
-          name={isMapView ? "list" : "map"}
-          size={20}
-          color={theme.text}
-        />
-        <ThemedText type="small" style={styles.toggleText}>
-          {isMapView ? "List" : "Map"}
-        </ThemedText>
-      </AnimatedPressable>
-
       <AuthModal visible={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </View>
   );
@@ -302,25 +285,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  toggleButton: {
-    position: "absolute",
-    right: Spacing.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  toggleText: {
-    marginLeft: Spacing.xs,
-    fontWeight: "600",
   },
   locationButton: {
     position: "absolute",
