@@ -68,18 +68,59 @@ export function AuthModal({ visible, onClose }: AuthModalProps) {
     try {
       setIsSocialLoading("google");
       
-      const redirectUri = AuthSession.makeRedirectUri();
-      const state = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        Math.random().toString()
-      );
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
       
-      Alert.alert(
-        "Google Sign-In", 
-        "Google Sign-In requires additional setup with OAuth credentials. Please use Apple Sign-In (iOS) or username/password for now."
-      );
+      if (!clientId) {
+        Alert.alert(
+          "Setup Required", 
+          "Google Sign-In requires a Google Cloud OAuth Client ID. Please add EXPO_PUBLIC_GOOGLE_CLIENT_ID to your environment variables."
+        );
+        return;
+      }
+      
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: "com.balloonloop.app",
+      });
+      
+      const discovery = {
+        authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenEndpoint: "https://oauth2.googleapis.com/token",
+        userInfoEndpoint: "https://www.googleapis.com/oauth2/v3/userinfo",
+      };
+      
+      const request = new AuthSession.AuthRequest({
+        clientId,
+        redirectUri,
+        scopes: ["openid", "profile", "email"],
+        responseType: AuthSession.ResponseType.Token,
+      });
+      
+      const result = await request.promptAsync(discovery);
+      
+      if (result.type === "success" && result.authentication?.accessToken) {
+        const userInfoResponse = await fetch(discovery.userInfoEndpoint, {
+          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
+        });
+        const userInfo = await userInfoResponse.json();
+        
+        const loginResult = await socialLogin("google", {
+          email: userInfo.email,
+          name: userInfo.name,
+          providerId: userInfo.sub,
+          identityToken: result.authentication.accessToken,
+        });
+        
+        if (loginResult.success) {
+          onClose();
+        } else {
+          Alert.alert("Error", loginResult.error || "Google sign-in failed");
+        }
+      } else if (result.type !== "cancel") {
+        Alert.alert("Error", "Google sign-in failed. Please try again.");
+      }
     } catch (error) {
-      Alert.alert("Error", "Google sign-in is not available at this time.");
+      console.log("Google sign-in error:", error);
+      Alert.alert("Error", "Google sign-in failed. Please try again.");
     } finally {
       setIsSocialLoading(null);
     }

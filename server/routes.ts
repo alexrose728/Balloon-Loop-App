@@ -112,6 +112,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // For Google Sign-In, validate the access token
+      if (provider === "google") {
+        if (!identityToken) {
+          return res.status(400).json({ error: "Access token is required for Google Sign-In" });
+        }
+        
+        try {
+          // Verify the token by fetching user info from Google
+          const tokenInfoResponse = await fetch(
+            `https://www.googleapis.com/oauth2/v3/userinfo`,
+            { headers: { Authorization: `Bearer ${identityToken}` } }
+          );
+          
+          if (!tokenInfoResponse.ok) {
+            return res.status(401).json({ error: "Invalid Google access token" });
+          }
+          
+          const tokenInfo = await tokenInfoResponse.json();
+          
+          // Verify the user ID matches
+          if (tokenInfo.sub !== providerId) {
+            return res.status(401).json({ error: "Token subject mismatch" });
+          }
+        } catch (tokenError) {
+          console.error("Google token validation error:", tokenError);
+          return res.status(401).json({ error: "Failed to validate Google token" });
+        }
+      }
+
       const socialUsername = `${provider}_${providerId}`;
       const displayName = name || email?.split("@")[0] || `${provider}User`;
       
