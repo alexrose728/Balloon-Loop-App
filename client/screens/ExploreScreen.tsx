@@ -245,7 +245,7 @@ export default function ExploreScreen() {
                   <Feather name="user" size={20} color="#FFFFFF" />
                   <View style={styles.authBannerText}>
                     <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
-                      Sign in to save favorites
+                      Sign in
                     </ThemedText>
                     <ThemedText type="small" style={{ color: "rgba(255,255,255,0.8)" }}>
                       Create an account to save and share listings

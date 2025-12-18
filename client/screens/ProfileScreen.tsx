@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -16,6 +16,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { useListing } from "@/hooks/useListings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/Button";
+import { AuthModal } from "@/components/AuthModal";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -78,7 +79,8 @@ export default function ProfileScreen() {
   const navigation = useNavigation<ProfileNavigationProp>();
   const { theme } = useTheme();
   const { listings, favorites } = useListing();
-  const { user, isLoggedIn, login, logout } = useAuth();
+  const { user, isLoggedIn, logout } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const myListings = listings.filter((l) => l.creatorId === user?.id);
 
@@ -107,11 +109,15 @@ export default function ProfileScreen() {
           style={[styles.loginSubtitle, { color: theme.textSecondary }]}
         >
           Sign in to save favorites, create listings, and connect with the
-          balloon community
+          community
         </ThemedText>
-        <Button onPress={login} style={styles.loginButton}>
+        <Button onPress={() => setShowAuthModal(true)} style={styles.loginButton}>
           Sign In
         </Button>
+        <AuthModal
+          visible={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+        />
       </View>
     );
   }
