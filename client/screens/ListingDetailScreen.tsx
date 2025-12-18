@@ -8,6 +8,7 @@ import {
   Share,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -104,7 +105,14 @@ export default function ListingDetailScreen() {
   };
 
   const handleContactLister = () => {
-    if (!listing || !listing.creatorId) return;
+    if (!listing) return;
+    if (!listing.creatorId) {
+      Alert.alert(
+        "Contact Unavailable",
+        "The lister for this listing is not available to contact at this time."
+      );
+      return;
+    }
     if (!isLoggedIn) {
       setShowAuthModal(true);
       return;
@@ -323,7 +331,7 @@ export default function ListingDetailScreen() {
               <Button onPress={openDirections} style={styles.directionsButton}>
                 Get Directions
               </Button>
-              {!isOwnListing && listing.creatorId ? (
+              {!isOwnListing ? (
                 <Button onPress={handleContactLister} style={styles.contactButton}>
                   Contact Lister
                 </Button>
