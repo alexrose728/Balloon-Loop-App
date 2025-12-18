@@ -163,17 +163,6 @@ export default function ListingDetailScreen() {
           <Feather name="arrow-left" size={20} color={theme.text} />
         </Pressable>
         <View style={styles.headerRightButtons}>
-          {!isOwnListing ? (
-            <Pressable
-              onPress={handleContactLister}
-              style={[
-                styles.headerButton,
-                { backgroundColor: theme.backgroundRoot },
-              ]}
-            >
-              <Feather name="message-circle" size={20} color={theme.text} />
-            </Pressable>
-          ) : null}
           <Pressable
             onPress={handleShare}
             style={[
@@ -342,6 +331,11 @@ export default function ListingDetailScreen() {
               <Button onPress={openDirections} style={styles.directionsButton}>
                 Get Directions
               </Button>
+              {!isOwnListing ? (
+                <Button onPress={handleContactLister} style={styles.contactButton}>
+                  Contact Lister
+                </Button>
+              ) : null}
             </View>
           </View>
         </View>
